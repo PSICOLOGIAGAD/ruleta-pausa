@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruleta de Pausa Activa</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f4f8; /* Fondo neutro */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #4a5568;
+        }
+
+        .container {
+            position: relative;
+            width: 450px;
+            height: 450px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        #btn-girar {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            color: #5a67d8;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            z-index: 10;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        #btn-girar:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        #resultado {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            background: white;
+            min-height: 80px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: none; /* Se muestra al terminar */
+        }
+
+        .flecha {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #5a67d8;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Respira y Suelta</h1>
+    
+    <div class="container">
+        <div class="flecha"></div>
+        <button id="btn-girar">SOLTAR</button> <canvas id="ruleta" width="500" height="500"></canvas>
+    </div>
+
+    <div id="resultado">
+        <h3 id="titulo-accion"></h3>
+        <p id="desc-accion"></p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('ruleta');
+        const ctx = canvas.getContext('2d');
+        const btnGirar = document.getElementById('btn-girar');
+        const divResultado = document.getElementById('resultado');
+        const tituloAccion = document.getElementById('titulo-accion');
+        const descAccion = document.getElementById('desc-accion');
+
+        // Definición de secciones 
+        const opciones = [
+            { titulo: "Respiración 4-7-8", desc: "Inhala 4s, retén 7s, exhala 8s. Desactiva el sistema nervioso.", color: "#a3bffa" },
+            { titulo: "Escaneo Sensorial", desc: "Nombra 3 cosas que hueles o tocas. Vuelve al presente.", color: "#b2f2bb" },
+            { titulo: "Estiramiento Ninja", desc: "Estira el cuello y hombros por 20s. Libera tensión.", color: "#d6bcfa" },
+            { titulo: "Micro-Dosis de Agua", desc: "Bebe un vaso de agua lentamente. Hidrata tu mente.", color: "#bee3f8" },
+            { titulo: "Grito Silencioso", desc: "Tensa todos los músculos y suelta de golpe.", color: "#c6f6d5" },
+            { titulo: "El Observador", desc: "Mira por la ventana al punto más lejano por 20s.", color: "#e9d8fd" },
+            { titulo: "Gratitud Fugaz", desc: "Piensa en algo bueno que pasó hoy. Cambia tu enfoque.", color: "#ebf4ff" },
+            { titulo: "Baile de 30s", desc: "Sacude el cuerpo como si te quitaras agua de encima.", color: "#f0fff4" }
+        ];
+
+        let anguloActual = 0;
+        const numOpciones = opciones.length;
+        const arco = 2 * Math.PI / numOpciones;
+
+        function dibujarRuleta() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < numOpciones; i++) {
+                const angulo = anguloActual + i * arco;
+                ctx.fillStyle = opciones[i].color;
+                ctx.beginPath();
+                ctx.moveTo(250, 250);
+                ctx.arc(250, 250, 240, angulo, angulo + arco);
+                ctx.fill();
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Texto de las secciones
+                ctx.save();
+                ctx.translate(250, 250);
+                ctx.rotate(angulo + arco / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#4a5568";
+                ctx.font = "bold 14px sans-serif";
+                ctx.fillText(opciones[i].titulo.split(" ")[0], 210, 5); // Solo primera palabra para que quepa bien
+                ctx.restore();
+            }
+        }
+
+        function girar() {
+            btnGirar.disabled = true;
+            divResultado.style.display = 'none';
+            
+            const girosExtra = Math.floor(Math.random() * 5) + 5;
+            const anguloFinal = anguloActual + (girosExtra * 2 * Math.PI) + (Math.random() * 2 * Math.PI);
+            const tiempoInicio = performance.now();
+            const duracion = 4000; // 4 segundos de rotación suave 
+
+            function animar(tiempoActual) {
+                const progreso = (tiempoActual - tiempoInicio) / duracion;
+                
+                if (progreso < 1) {
+                    // Efecto ease-out suave 
+                    const easing = 1 - Math.pow(1 - progreso, 3);
+                    anguloActual = anguloFinal * easing;
+                    dibujarRuleta();
+                    requestAnimationFrame(animar);
+                } else {
+                    anguloActual = anguloFinal % (2 * Math.PI);
+                    btnGirar.disabled = false;
+                    mostrarResultado();
+                }
+            }
+            requestAnimationFrame(animar);
+        }
+
+        function mostrarResultado() {
+            // Calcular qué sección quedó arriba (considerando que la flecha está en el tope -PI/2)
+            const indiceOriginal = Math.floor(((1.5 * Math.PI - (anguloActual % (2 * Math.PI))) % (2 * Math.PI)) / arco);
+            const indiceCorregido = (indiceOriginal + numOpciones) % numOpciones;
+            
+            const seleccion = opciones[indiceCorregido];
+            tituloAccion.innerText = seleccion.titulo;
+            descAccion.innerText = seleccion.desc;
+            divResultado.style.display = 'block';
+            
+            // Simulación de "feedback visual" sutil [cite: 8]
+            divResultado.style.border = `2px solid ${seleccion.color}`;
+        }
+
+        btnGirar.onclick = girar;
+        dibujarRuleta();
+    </script>
+</body>
+</html>
